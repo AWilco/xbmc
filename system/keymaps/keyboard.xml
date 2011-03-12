@@ -72,8 +72,8 @@
       <four>Number4</four>
       <five>Number5</five>
       <six>Number6</six>
-      <seven>Number7</seven>
-      <eight>Number8</eight>
+      <seven>Number5</seven>
+      <eight>XBMC.ActivateWindow(MyMusic)</eight>
       <nine>Number9</nine>
       <backslash>ToggleFullScreen</backslash>
       <browser_home>XBMC.ActivateWindow(Home)</browser_home>
