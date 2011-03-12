@@ -21,12 +21,14 @@
  *
  */
 
+#include "system.h" // until we get sane int types used here
 #include "IAudioCallback.h"
-#include "Key.h"
+#include "utils/StdString.h"
 
 struct TextCacheStruct_t;
 class TiXmlElement;
 class CStreamDetails;
+class CAction;
 
 class IPlayerCallback
 {
@@ -116,6 +118,7 @@ public:
   virtual int  GetAudioStream()       { return -1; }
   virtual void GetAudioStreamName(int iStream, CStdString &strStreamName){};
   virtual void SetAudioStream(int iStream){};
+  virtual void GetAudioStreamLanguage(int iStream, CStdString &strLanguage){};
 
   virtual TextCacheStruct_t* GetTeletextCache() { return NULL; };
   virtual void LoadPage(int p, int sp, unsigned char* buffer) {};

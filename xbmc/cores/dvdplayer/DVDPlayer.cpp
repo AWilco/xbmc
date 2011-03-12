@@ -38,14 +38,14 @@
 
 #include "DVDFileInfo.h"
 
-#include "Util.h"
-#include "utils/GUIInfoManager.h"
-#include "GUIWindowManager.h"
+#include "utils/URIUtils.h"
+#include "GUIInfoManager.h"
+#include "guilib/GUIWindowManager.h"
 #include "Application.h"
 #include "DVDPerformanceCounter.h"
-#include "FileSystem/File.h"
-#include "Picture.h"
-#include "Codecs/DllSwScale.h"
+#include "filesystem/File.h"
+#include "pictures/Picture.h"
+#include "DllSwScale.h"
 #ifdef HAS_VIDEO_PLAYBACK
 #include "cores/VideoRenderers/RenderManager.h"
 #endif
@@ -54,18 +54,16 @@
 #else
 #define MEASURE_FUNCTION
 #endif
-#include "AdvancedSettings.h"
+#include "settings/AdvancedSettings.h"
 #include "FileItem.h"
-#include "MouseStat.h"
-#include "GUISettings.h"
+#include "settings/GUISettings.h"
 #include "GUIUserMessages.h"
-#include "Settings.h"
-#include "LocalizeStrings.h"
+#include "settings/Settings.h"
 #include "utils/log.h"
 #include "utils/TimeUtils.h"
 #include "utils/StreamDetails.h"
-#include "MediaManager.h"
-#include "GUIDialogBusy.h"
+#include "storage/MediaManager.h"
+#include "dialogs/GUIDialogBusy.h"
 
 using namespace std;
 
@@ -82,6 +80,14 @@ void CSelectionStreams::Clear(StreamType type, StreamSource source)
 
     m_Streams.erase(m_Streams.begin() + i);
   }
+}
+
+void CDVDPlayer::GetAudioStreamLanguage(int iStream, CStdString &strLanguage)
+{
+  strLanguage = "";
+  SelectionStream& s = m_SelectionStreams.Get(STREAM_AUDIO, iStream);
+  if(s.language.length() > 0)
+    strLanguage = s.language;
 }
 
 SelectionStream& CSelectionStreams::Get(StreamType type, int index)
@@ -342,7 +348,7 @@ bool CDVDPlayer::OpenFile(const CFileItem& file, const CPlayerOptions &options)
       CGUIDialogBusy* dialog = (CGUIDialogBusy*)g_windowManager.GetWindow(WINDOW_DIALOG_BUSY);
       dialog->Show();
       while(!m_ready.WaitMSec(1))
-        g_windowManager.Process(true);
+        g_windowManager.Process(false);
       dialog->Close();
     }
 
@@ -471,9 +477,8 @@ retry:
 
     for(unsigned int i=0;i<filenames.size();i++)
     {
-      CLog::Log(LOGERROR, "test subs Amet [%s]", filenames[i].c_str());
       // if vobsub subtitle:		
-      if ( CUtil::GetExtension(filenames[i]) == ".idx" ) 
+      if (URIUtils::GetExtension(filenames[i]) == ".idx")
       {
         CStdString strSubFile;
         if ( CUtil::FindVobSubPair( filenames, filenames[i], strSubFile ) )
@@ -3115,6 +3120,20 @@ bool CDVDPlayer::OnAction(const CAction &action)
     {
       switch (action.GetID())
       {
+      case ACTION_NEXT_ITEM:
+      case ACTION_PAGE_UP:
+        THREAD_ACTION(action);
+        CLog::Log(LOGDEBUG, " - pushed next in menu, stream will decide");
+        pStream->OnNext();
+        g_infoManager.SetDisplayAfterSeek();
+        return true;
+      case ACTION_PREV_ITEM:
+      case ACTION_PAGE_DOWN:
+        THREAD_ACTION(action);
+        CLog::Log(LOGDEBUG, " - pushed prev in menu, stream will decide");
+        pStream->OnPrevious();
+        g_infoManager.SetDisplayAfterSeek();
+        return true;
       case ACTION_PREVIOUS_MENU:
         {
           THREAD_ACTION(action);
@@ -3292,16 +3311,15 @@ bool CDVDPlayer::GetCurrentSubtitle(CStdString& strSubtitle)
   if (m_pInputStream && m_pInputStream->IsStreamType(DVDSTREAM_TYPE_DVD))
     return false;
 
-  bool result = m_dvdPlayerSubtitle.GetCurrentSubtitle(strSubtitle, pts - m_dvdPlayerVideo.GetSubtitleDelay());
+  m_dvdPlayerSubtitle.GetCurrentSubtitle(strSubtitle, pts - m_dvdPlayerVideo.GetSubtitleDelay());
   
   // In case we stalled, don't output any subs
   if (m_dvdPlayerVideo.IsStalled() || m_dvdPlayerAudio.IsStalled())
-  {
-    strSubtitle = "";
-    return false;
-  }
-    
-  return result;
+    strSubtitle = m_lastSub;
+  else
+    m_lastSub = strSubtitle;
+  
+  return !strSubtitle.IsEmpty();
 }
 
 CStdString CDVDPlayer::GetPlayerState()
@@ -3391,12 +3409,12 @@ int CDVDPlayer::GetSourceBitrate()
 
 int CDVDPlayer::AddSubtitleFile(const std::string& filename, const std::string& subfilename, CDemuxStream::EFlags flags)
 {
-  std::string ext = CUtil::GetExtension(filename);
+  std::string ext = URIUtils::GetExtension(filename);
   std::string vobsubfile = subfilename;
   if(ext == ".idx")
   {
     if (vobsubfile.empty())
-      vobsubfile = CUtil::ReplaceExtension(filename, ".sub");
+      vobsubfile = URIUtils::ReplaceExtension(filename, ".sub");
    
     CDVDDemuxVobsub v;
     if(!v.Open(filename, vobsubfile))
@@ -3408,7 +3426,7 @@ int CDVDPlayer::AddSubtitleFile(const std::string& filename, const std::string& 
   }
   if(ext == ".sub")
   {
-    CStdString strReplace(CUtil::ReplaceExtension(filename,".idx"));
+    CStdString strReplace(URIUtils::ReplaceExtension(filename,".idx"));
     if (XFILE::CFile::Exists(strReplace))
       return -1;
   }
@@ -3417,7 +3435,7 @@ int CDVDPlayer::AddSubtitleFile(const std::string& filename, const std::string& 
   s.type     = STREAM_SUBTITLE;
   s.id       = 0;
   s.filename = filename;
-  s.name     = CUtil::GetFileName(filename);
+  s.name     = URIUtils::GetFileName(filename);
   s.flags    = flags;
   m_SelectionStreams.Update(s);
   return m_SelectionStreams.IndexOf(STREAM_SUBTITLE, s.source, s.id);

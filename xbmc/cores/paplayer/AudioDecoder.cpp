@@ -21,10 +21,10 @@
 
 #include "AudioDecoder.h"
 #include "CodecFactory.h"
-#include "GUISettings.h"
+#include "settings/GUISettings.h"
 #include "FileItem.h"
-#include "MusicInfoTag.h"
-#include "utils/SingleLock.h"
+#include "music/tags/MusicInfoTag.h"
+#include "threads/SingleLock.h"
 #include "utils/log.h"
 #include <math.h>
 
@@ -155,7 +155,7 @@ void *CAudioDecoder::GetData(unsigned int size)
   if (m_gaplessBufferSize > size)
   {
     memcpy(m_outputBuffer, m_gaplessBuffer, size*sizeof(float));
-    memcpy(m_gaplessBuffer, m_gaplessBuffer + size, (m_gaplessBufferSize - size)*sizeof(float));
+    memmove(m_gaplessBuffer, m_gaplessBuffer + size, (m_gaplessBufferSize - size)*sizeof(float));
     m_gaplessBufferSize -= size;
     return m_outputBuffer;
   }

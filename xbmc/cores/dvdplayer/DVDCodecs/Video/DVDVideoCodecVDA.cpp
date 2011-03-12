@@ -25,13 +25,13 @@
 
 #if defined(HAVE_LIBVDADECODER)
 #include "DynamicDll.h"
-#include "GUISettings.h"
+#include "settings/GUISettings.h"
 #include "DVDClock.h"
 #include "DVDStreamInfo.h"
-#include "DVDCodecUtils.h"
+#include "cores/dvdplayer/DVDCodecs/DVDCodecUtils.h"
 #include "DVDVideoCodecVDA.h"
-#include "Codecs/DllAvFormat.h"
-#include "Codecs/DllSwScale.h"
+#include "DllAvFormat.h"
+#include "DllSwScale.h"
 #include "utils/log.h"
 #include "utils/TimeUtils.h"
 #include "osx/CocoaInterface.h"
@@ -226,6 +226,12 @@ static void GetFrameDisplayTimeFromDictionary(
    (((const uint8_t*)(x))[2] <<  8) |        \
    ((const uint8_t*)(x))[3])
 
+#define VDA_WB32(p, d) { \
+  ((uint8_t*)(p))[3] = (d); \
+  ((uint8_t*)(p))[2] = (d) >> 8; \
+  ((uint8_t*)(p))[1] = (d) >> 16; \
+  ((uint8_t*)(p))[0] = (d) >> 24; }
+
 static const uint8_t *avc_find_startcode_internal(const uint8_t *p, const uint8_t *end)
 {
   const uint8_t *a = p + 4 - ((intptr_t)p & 3);
@@ -397,6 +403,7 @@ CDVDVideoCodecVDA::CDVDVideoCodecVDA() : CDVDVideoCodec()
   pthread_mutex_init(&m_queue_mutex, NULL);
 
   m_convert_bytestream = false;
+  m_convert_3byteTo4byteNALSize = false;
   m_dllAvUtil = NULL;
   m_dllAvFormat = NULL;
   m_dllSwScale = NULL;
@@ -484,6 +491,18 @@ bool CDVDVideoCodecVDA::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
         }
         else
         {
+          if (extradata[4] == 0xFE)
+          {
+            // video content is from so silly encoder that think 3 byte NAL sizes
+            // are valid, setup to convert 3 byte NAL sizes to 4 byte.
+            m_dllAvUtil = new DllAvUtil;
+            m_dllAvFormat = new DllAvFormat;
+            if (!m_dllAvUtil->Load() || !m_dllAvFormat->Load())
+              return false;
+
+            extradata[4] = 0xFF;
+            m_convert_3byteTo4byteNALSize = true;
+          }
           // CFDataCreate makes a copy of extradata contents
           avcCData = CFDataCreate(kCFAllocatorDefault, (const uint8_t*)extradata, extrasize);
         }
@@ -504,6 +523,7 @@ bool CDVDVideoCodecVDA::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
       return false;
     }
 
+    // setup the decoder configuration dict
     CFMutableDictionaryRef decoderConfiguration = CFDictionaryCreateMutable(
       kCFAllocatorDefault, 4, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 
@@ -516,17 +536,25 @@ bool CDVDVideoCodecVDA::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
     CFDictionarySetValue(decoderConfiguration, m_dll->Get_kVDADecoderConfiguration_SourceFormat(), avcFormat);
     CFDictionarySetValue(decoderConfiguration, m_dll->Get_kVDADecoderConfiguration_avcCData(), avcCData);
 
-    // release our retained object refs
+    // release the retained object refs, decoderConfiguration owns them now
     CFRelease(avcWidth);
     CFRelease(avcHeight);
     CFRelease(avcFormat);
     CFRelease(avcCData);
 
-    // create the VDADecoder object using defaulted '2vuy' video format buffers.
+    // setup the destination image buffer dict, vda will output this pict format
+    CFMutableDictionaryRef destinationImageBufferAttributes = CFDictionaryCreateMutable(
+      kCFAllocatorDefault, 1, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+
+    OSType cvPixelFormatType = kCVPixelFormatType_422YpCbCr8;
+    CFNumberRef pixelFormat  = CFNumberCreate(kCFAllocatorDefault, kCFNumberSInt32Type, &cvPixelFormatType);
+    CFDictionarySetValue(destinationImageBufferAttributes, kCVPixelBufferPixelFormatTypeKey, pixelFormat);
+
+    // create the VDADecoder object
     OSStatus status;
     try
     {
-      status = m_dll->VDADecoderCreate(decoderConfiguration, NULL,
+      status = m_dll->VDADecoderCreate(decoderConfiguration, destinationImageBufferAttributes,
         (VDADecoderOutputCallback *)VDADecoderCallback, this, (VDADecoder*)&m_vda_decoder);
     }
     catch (...)
@@ -535,10 +563,15 @@ bool CDVDVideoCodecVDA::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options)
       status = kVDADecoderDecoderFailedErr;
     }
     CFRelease(decoderConfiguration);
+    CFRelease(destinationImageBufferAttributes);
     if (status != kVDADecoderNoErr)
     {
-      CLog::Log(LOGNOTICE, "%s - VDADecoder Codec failed to open, status(%d), profile(%d), level(%d)",
-        __FUNCTION__, (int)status, profile, level);
+	  if (status == kVDADecoderDecoderFailedErr)
+        CLog::Log(LOGNOTICE, "%s - VDADecoder Codec failed to open, currently in use by another process",
+          __FUNCTION__);
+	  else
+        CLog::Log(LOGNOTICE, "%s - VDADecoder Codec failed to open, status(%d), profile(%d), level(%d)",
+          __FUNCTION__, (int)status, profile, level);
       return false;
     }
 
@@ -647,6 +680,30 @@ int CDVDVideoCodecVDA::Decode(BYTE* pData, int iSize, double dts, double pts)
       avc_demux = CFDataCreate(kCFAllocatorDefault, demuxer_content, demuxer_bytes);
       m_dllAvUtil->av_free(demuxer_content);
     }
+    else if (m_convert_3byteTo4byteNALSize)
+    {
+      // convert demuxer packet from 3 byte NAL sizes to 4 byte
+      ByteIOContext *pb;
+      if (m_dllAvFormat->url_open_dyn_buf(&pb) < 0)
+        return VC_ERROR;
+
+      uint32_t nal_size;
+      uint8_t *end = pData + iSize;
+      uint8_t *nal_start = pData;
+      while (nal_start < end)
+      {
+        nal_size = VDA_RB24(nal_start);
+        m_dllAvFormat->put_be32(pb, nal_size);
+        nal_start += 3;
+        m_dllAvFormat->put_buffer(pb, nal_start, nal_size);
+        nal_start += nal_size;
+      }
+
+      uint8_t *demuxer_content;
+      int demuxer_bytes = m_dllAvFormat->url_close_dyn_buf(pb, &demuxer_content);
+      avc_demux = CFDataCreate(kCFAllocatorDefault, demuxer_content, demuxer_bytes);
+      m_dllAvUtil->av_free(demuxer_content);
+    }
     else
     {
       avc_demux = CFDataCreate(kCFAllocatorDefault, pData, iSize);
@@ -669,7 +726,7 @@ int CDVDVideoCodecVDA::Decode(BYTE* pData, int iSize, double dts, double pts)
 
   // TODO: queue depth is related to the number of reference frames in encoded h.264.
   // so we need to buffer until we get N ref frames + 1.
-  if (m_queue_depth < 16)
+  if (m_queue_depth < 4)
   {
     return VC_BUFFER;
   }

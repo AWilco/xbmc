@@ -22,7 +22,7 @@
  *
  */
 
-#include "StdString.h"
+#include "utils/StdString.h"
 #include "system.h"
 
 #define MAX_LEADBYTES             12
@@ -674,11 +674,6 @@ extern "C" HANDLE WINAPI dllGetProcessHeap(void);
 extern "C" UINT WINAPI dllGetShortPathName(LPTSTR lpszLongPath, LPTSTR lpszShortPath, UINT cchBuffer);
 extern "C" UINT WINAPI dllSetErrorMode(UINT i);
 extern "C" BOOL WINAPI dllIsProcessorFeaturePresent(DWORD ProcessorFeature);
-
-extern "C" LPVOID WINAPI dllTlsGetValue(DWORD dwTlsIndex);
-extern "C" BOOL WINAPI dllTlsSetValue(int dwTlsIndex, LPVOID lpTlsValue);
-extern "C" BOOL WINAPI dllTlsFree(DWORD dwTlsIndex);
-extern "C" DWORD WINAPI dllTlsAlloc();
 
 extern "C" BOOL WINAPI dllFileTimeToLocalFileTime(CONST FILETIME *lpFileTime, LPFILETIME lpLocalFileTime);
 extern "C" BOOL WINAPI dllFileTimeToSystemTime(CONST FILETIME *lpFileTime, LPSYSTEMTIME lpSystemTime);

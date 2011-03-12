@@ -22,9 +22,10 @@
 #include "system.h"
 #include "../RenderFlags.h"
 #include "YUV2RGBShader.h"
-#include "AdvancedSettings.h"
-#include "TransformMatrix.h"
+#include "settings/AdvancedSettings.h"
+#include "guilib/TransformMatrix.h"
 #include "utils/log.h"
+#include "utils/GLUtils.h"
 
 #include <string>
 #include <sstream>

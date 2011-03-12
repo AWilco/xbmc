@@ -8,6 +8,7 @@
   SDLMain.m and SDLMain.h carry neither a copyright or license. They are in the
   public domain.
 */
+#if !defined(__arm__)
 
 #import "SDL/SDL.h"
 #import "SDLMain.h"
@@ -18,10 +19,10 @@
 //hack around problem with xbmc's typedef int BOOL
 // and obj-c's typedef unsigned char BOOL
 #define BOOL XBMC_BOOL 
-#import "StdString.h"
+#import "utils/StdString.h"
 #import "PlatformDefs.h"
 #import "ApplicationMessenger.h"
-#import "DarwinStorageProvider.h"
+#import "storage/osx/DarwinStorageProvider.h"
 #undef BOOL
 
 // For some reaon, Apple removed setAppleMenu from the headers in 10.4,
@@ -464,4 +465,4 @@ int main(int argc, char *argv[])
 
   return 0;
 }
-
+#endif

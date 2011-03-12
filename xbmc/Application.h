@@ -24,7 +24,7 @@
 #include "system.h" // for HAS_DVD_DRIVE et. al.
 #include "XBApplicationEx.h"
 
-#include "IMsgTargetCallback.h"
+#include "guilib/IMsgTargetCallback.h"
 
 class CFileItem;
 class CFileItemList;
@@ -35,26 +35,26 @@ namespace ADDON
   typedef boost::shared_ptr<IAddon> AddonPtr;
 }
 
-#include "GUIDialogSeekBar.h"
-#include "GUIDialogKaiToast.h"
-#include "GUIDialogVolumeBar.h"
-#include "GUIDialogMuteBug.h"
-#include "GUIWindowPointer.h"   // Mouse pointer
+#include "dialogs/GUIDialogSeekBar.h"
+#include "dialogs/GUIDialogKaiToast.h"
+#include "dialogs/GUIDialogVolumeBar.h"
+#include "dialogs/GUIDialogMuteBug.h"
+#include "windows/GUIWindowPointer.h"   // Mouse pointer
 
 #include "cores/IPlayer.h"
 #include "cores/playercorefactory/PlayerCoreFactory.h"
 #include "PlayListPlayer.h"
 #if !defined(_WIN32) && defined(HAS_DVD_DRIVE)
-#include "DetectDVDType.h"
+#include "storage/DetectDVDType.h"
 #endif
 #ifdef _WIN32
 #include "win32/WIN32Util.h"
 #endif
 #include "Autorun.h"
-#include "Bookmark.h"
+#include "video/Bookmark.h"
 #include "utils/Stopwatch.h"
 #include "ApplicationMessenger.h"
-#include "utils/Network.h"
+#include "network/Network.h"
 #include "utils/CharsetConverter.h"
 #ifdef HAS_PERFORMANCE_SAMPLE
 #include "utils/PerformanceStats.h"
@@ -62,11 +62,11 @@ namespace ADDON
 #ifdef _LINUX
 #include "linux/LinuxResourceCounter.h"
 #endif
-#include "XBMC_events.h"
-#include "utils/Thread.h"
+#include "windowing/XBMC_events.h"
+#include "threads/Thread.h"
 
 #ifdef HAS_WEB_SERVER
-#include "utils/WebServer.h"
+#include "network/WebServer.h"
 #endif
 
 #ifdef HAS_SDL
@@ -126,7 +126,7 @@ public:
   bool IsCurrentThread() const;
   void Stop();
   void RestartApp();
-  void UnloadSkin();
+  void UnloadSkin(bool forReload = false);
   bool LoadUserWindows();
   void ReloadSkin();
   const CStdString& CurrentFile();
@@ -298,6 +298,8 @@ protected:
   bool LoadSkin(const CStdString& skinID);
   void LoadSkin(const boost::shared_ptr<ADDON::CSkinInfo>& skin);
 
+  bool m_skinReloading; // if true we disallow LoadSkin until ReloadSkin is called
+
   friend class CApplicationMessenger;
   // screensaver
   bool m_bScreenSave;
@@ -361,7 +363,6 @@ protected:
   bool PlayStack(const CFileItem& item, bool bRestart);
   bool SwitchToFullScreen();
   bool ProcessMouse();
-  bool ProcessKeyboard();
   bool ProcessRemote(float frameTime);
   bool ProcessGamepad(float frameTime);
   bool ProcessEventServer(float frameTime);

@@ -20,11 +20,12 @@
  *
  */
 
+#if !defined(__arm__)
 #include "CoreAudioRenderer.h"
-#include "AudioContext.h"
-#include "GUISettings.h"
-#include "Settings.h"
-#include "utils/Atomics.h"
+#include "guilib/AudioContext.h"
+#include "settings/GUISettings.h"
+#include "settings/Settings.h"
+#include "threads/Atomics.h"
 #include "utils/log.h"
 #include "utils/TimeUtils.h"
 
@@ -923,5 +924,5 @@ bool CCoreAudioRenderer::InitializeEncoded(AudioDeviceID outputDevice, UInt32 sa
 }
 
 #endif
-
+#endif
 

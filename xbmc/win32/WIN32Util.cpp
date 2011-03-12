@@ -20,9 +20,10 @@
  */
 
 #include "WIN32Util.h"
-#include "GUISettings.h"
-#include "../Util.h"
-#include "FileSystem/cdioSupport.h"
+#include "settings/GUISettings.h"
+#include "Util.h"
+#include "utils/URIUtils.h"
+#include "storage/cdioSupport.h"
 #include "PowrProf.h"
 #include "WindowHelper.h"
 #include "Application.h"
@@ -32,9 +33,9 @@
 #if _MSC_VER > 1400
 #include "Setupapi.h"
 #endif
-#include "MediaManager.h"
-#include "WindowingFactory.h"
-#include "LocalizeStrings.h"
+#include "storage/MediaManager.h"
+#include "windowing/WindowingFactory.h"
+#include "guilib/LocalizeStrings.h"
 #include "log.h"
 #include "StringUtils.h"
 #include "DllPaths_win32.h"
@@ -68,67 +69,6 @@ CWIN32Util::CWIN32Util(void)
 
 CWIN32Util::~CWIN32Util(void)
 {
-}
-
-
-const CStdString CWIN32Util::GetNextFreeDriveLetter()
-{
-  for(int iDrive='a';iDrive<='z';iDrive++)
-  {
-    CStdString strDrive;
-    strDrive.Format("%c:",iDrive);
-    int iType = GetDriveType(strDrive);
-    if(iType == DRIVE_NO_ROOT_DIR && iDrive != 'a' && iDrive != 'b')
-      return strDrive;
-  }
-  return StringUtils::EmptyString;
-}
-
-CStdString CWIN32Util::MountShare(const CStdString &smbPath, const CStdString &strUser, const CStdString &strPass, DWORD *dwError)
-{
-  NETRESOURCE nr;
-  memset(&nr,0,sizeof(nr));
-  CStdString strRemote = smbPath;
-  CStdString strDrive = CWIN32Util::GetNextFreeDriveLetter();
-
-  if(strDrive == StringUtils::EmptyString)
-    return StringUtils::EmptyString;
-
-  strRemote.Replace('/', '\\');
-
-  nr.lpRemoteName = (LPTSTR)(LPCTSTR)strRemote.c_str();
-  nr.lpLocalName  = (LPTSTR)(LPCTSTR)strDrive.c_str();
-  nr.dwType       = RESOURCETYPE_DISK;
-
-  DWORD dwRes = WNetAddConnection2(&nr,(LPCTSTR)strPass.c_str(), (LPCTSTR)strUser.c_str(), NULL);
-
-  if(dwError != NULL)
-    *dwError = dwRes;
-
-  if(dwRes != NO_ERROR)
-  {
-    CLog::Log(LOGERROR, "Can't mount %s to %s. Error code %d",strRemote.c_str(), strDrive.c_str(),dwRes);
-    return StringUtils::EmptyString;
-  }
-
-  return strDrive;
-}
-
-DWORD CWIN32Util::UmountShare(const CStdString &strPath)
-{
-  return WNetCancelConnection2((LPCTSTR)strPath.c_str(),NULL,true);
-}
-
-CStdString CWIN32Util::MountShare(const CStdString &strPath, DWORD *dwError)
-{
-  CURL url(strPath);
-  CStdString strPassword = url.GetPassWord();
-  CStdString strUserName = url.GetUserName();
-  CStdString strPathToShare = "\\\\"+url.GetHostName() + "\\" + url.GetShareName();
-  if(!url.GetUserName().IsEmpty())
-    return CWIN32Util::MountShare(strPathToShare, strUserName, strPassword, dwError);
-  else
-    return CWIN32Util::MountShare(strPathToShare, "", "", dwError);
 }
 
 CStdString CWIN32Util::URLEncode(const CURL &url)
@@ -910,7 +850,7 @@ bool CWIN32Util::IsAudioCD(const CStdString& strPath)
   CStdString strDrive = strPath;
   char cVolumenName[256];
   char cFSName[256];
-  CUtil::AddSlashAtEnd(strDrive);
+  URIUtils::AddSlashAtEnd(strDrive);
   if(GetVolumeInformation(strDrive.c_str(), cVolumenName, 255, NULL, NULL, NULL, cFSName, 255)==0)
     return false;
   return (strncmp(cFSName,"CDFS",4)==0 && strncmp(cVolumenName,"Audio CD",4)==0);
@@ -921,7 +861,7 @@ CStdString CWIN32Util::GetDiskLabel(const CStdString& strPath)
   CStdString strDrive = strPath;
   char cVolumenName[128];
   char cFSName[128];
-  CUtil::AddSlashAtEnd(strDrive);
+  URIUtils::AddSlashAtEnd(strDrive);
   if(GetVolumeInformation(strDrive.c_str(), cVolumenName, 127, NULL, NULL, NULL, cFSName, 127)==0)
     return "";
   return CStdString(cVolumenName).TrimRight(" ");
@@ -1395,7 +1335,7 @@ bool CWIN32Util::GetCrystalHDLibraryPath(CStdString &strPath)
     char *pcPath= NULL;
     if( CWIN32Util::UtilRegGetValue( hKey, BC_REG_INST_PATH, &dwType, &pcPath, NULL, sizeof( pcPath ) ) == ERROR_SUCCESS )
     {
-      strPath = CUtil::AddFileToFolder(pcPath, BC_BCM_DLL);
+      strPath = URIUtils::AddFileToFolder(pcPath, BC_BCM_DLL);
       CLog::Log(LOGDEBUG, "CrystalHD: got CrystalHD installation path (%s)", strPath.c_str());
       return true;
     }

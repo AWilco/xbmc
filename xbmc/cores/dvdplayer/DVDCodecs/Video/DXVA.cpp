@@ -21,6 +21,10 @@
 
 #ifdef HAS_DX
 
+// setting that here because otherwise SampleFormat is defined to AVSampleFormat
+// which we don't use here
+#define FF_API_OLD_SAMPLE_FMT 0
+
 #include <windows.h>
 #include <d3d9.h>
 #include <Initguid.h>
@@ -30,12 +34,12 @@
 #include "../DVDCodecUtils.h"
 
 #include "DXVA.h"
-#include "WindowingFactory.h"
+#include "windowing/WindowingFactory.h"
 #include "../../../VideoRenderers/WinRenderer.h"
-#include "Settings.h"
+#include "settings/Settings.h"
 #include "boost/shared_ptr.hpp"
 #include "AutoPtrHandle.h"
-#include "AdvancedSettings.h"
+#include "settings/AdvancedSettings.h"
 
 #define ALLOW_ADDING_SURFACES 0
 
@@ -734,7 +738,7 @@ bool CDecoder::OpenTarget(const GUID &guid)
 
 bool CDecoder::OpenDecoder()
 {
-  SAFE_RELEASE(m_decoder)
+  SAFE_RELEASE(m_decoder);
 
   m_context->surface_count = m_refs + 1 + 1 + m_processor->Size(); // refs + 1 decode + 1 libavcodec safety + processor buffer
 

@@ -20,30 +20,33 @@
  */
 
 #include "GUIViewState.h"
-#include "GUIViewStateAddonBrowser.h"
-#include "GUIViewStateMusic.h"
-#include "GUIViewStateVideo.h"
-#include "GUIViewStatePictures.h"
-#include "GUIViewStatePrograms.h"
+#include "addons/GUIViewStateAddonBrowser.h"
+#include "music/GUIViewStateMusic.h"
+#include "video/GUIViewStateVideo.h"
+#include "pictures/GUIViewStatePictures.h"
+#include "programs/GUIViewStatePrograms.h"
 #include "PlayListPlayer.h"
-#include "Util.h"
+#include "utils/URIUtils.h"
 #include "URL.h"
 #include "GUIPassword.h"
-#include "GUIBaseContainer.h" // for VIEW_TYPE_*
+#include "guilib/GUIBaseContainer.h" // for VIEW_TYPE_*
 #include "ViewDatabase.h"
 #include "AutoSwitch.h"
-#include "GUIWindowManager.h"
+#include "guilib/GUIWindowManager.h"
+#include "addons/Addon.h"
 #include "addons/AddonManager.h"
+#include "addons/PluginSource.h"
 #include "ViewState.h"
-#include "GUISettings.h"
-#include "AdvancedSettings.h"
-#include "Settings.h"
+#include "settings/GUISettings.h"
+#include "settings/AdvancedSettings.h"
+#include "settings/Settings.h"
 #include "FileItem.h"
-#include "Key.h"
-#include "FileSystem/AddonsDirectory.h"
-#include "TextureManager.h"
+#include "guilib/Key.h"
+#include "filesystem/AddonsDirectory.h"
+#include "guilib/TextureManager.h"
 
 using namespace std;
+using namespace ADDON;
 
 CStdString CGUIViewState::m_strPlaylistDirectory;
 VECSOURCES CGUIViewState::m_sources;
@@ -133,6 +136,7 @@ CGUIViewState::CGUIViewState(const CFileItemList& items) : m_items(items)
 {
   m_currentViewAsControl=0;
   m_currentSortMethod=0;
+  m_playlist = PLAYLIST_NONE;
   m_sortOrder=SORT_ORDER_ASC;
 }
 
@@ -147,7 +151,7 @@ SORT_ORDER CGUIViewState::GetDisplaySortOrder() const
   // and descending for the views which should be usually descending.
   // default sort order for date, size, program count + rating is reversed
   SORT_METHOD sortMethod = GetSortMethod();
-  if (sortMethod == SORT_METHOD_DATE || sortMethod == SORT_METHOD_SIZE ||
+  if (sortMethod == SORT_METHOD_DATE || sortMethod == SORT_METHOD_SIZE || sortMethod == SORT_METHOD_PLAYCOUNT ||
       sortMethod == SORT_METHOD_VIDEO_RATING || sortMethod == SORT_METHOD_PROGRAM_COUNT ||
       sortMethod == SORT_METHOD_SONG_RATING || sortMethod == SORT_METHOD_BITRATE || sortMethod == SORT_METHOD_LISTENERS)
   {
@@ -298,7 +302,7 @@ bool CGUIViewState::DisableAddSourceButtons()
 
 int CGUIViewState::GetPlaylist()
 {
-  return PLAYLIST_NONE;
+  return m_playlist;
 }
 
 const CStdString& CGUIViewState::GetPlaylistDirectory()
@@ -309,7 +313,7 @@ const CStdString& CGUIViewState::GetPlaylistDirectory()
 void CGUIViewState::SetPlaylistDirectory(const CStdString& strDirectory)
 {
   m_strPlaylistDirectory=strDirectory;
-  CUtil::RemoveSlashAtEnd(m_strPlaylistDirectory);
+  URIUtils::RemoveSlashAtEnd(m_strPlaylistDirectory);
 }
 
 bool CGUIViewState::IsCurrentPlaylistDirectory(const CStdString& strDirectory)
@@ -318,7 +322,7 @@ bool CGUIViewState::IsCurrentPlaylistDirectory(const CStdString& strDirectory)
     return false;
 
   CStdString strDir=strDirectory;
-  CUtil::RemoveSlashAtEnd(strDir);
+  URIUtils::RemoveSlashAtEnd(strDir);
 
   return (m_strPlaylistDirectory==strDir);
 }
@@ -368,7 +372,7 @@ void CGUIViewState::AddLiveTVSources()
   VECSOURCES *sources = g_settings.GetSourcesFromType("video");
   for (IVECSOURCES it = sources->begin(); it != sources->end(); it++)
   {
-    if (CUtil::IsLiveTV((*it).strPath))
+    if (URIUtils::IsLiveTV((*it).strPath))
     {
       CMediaSource source;
       source.strPath = (*it).strPath;
@@ -444,6 +448,19 @@ CGUIViewStateFromItems::CGUIViewStateFromItems(const CFileItemList &items) : CGU
   SetViewAsControl(DEFAULT_VIEW_LIST);
 
   SetSortOrder(SORT_ORDER_ASC);
+  if (items.IsPlugin())
+  {
+    CURL url(items.m_strPath);
+    AddonPtr addon;
+    if (CAddonMgr::Get().GetAddon(url.GetHostName(),addon) && addon)
+    {
+      PluginPtr plugin = boost::static_pointer_cast<CPluginSource>(addon);
+      if (plugin->Provides(CPluginSource::AUDIO))
+        m_playlist = PLAYLIST_MUSIC;
+      if (plugin->Provides(CPluginSource::VIDEO))
+        m_playlist = PLAYLIST_VIDEO;
+    }
+  }
   LoadViewState(items.m_strPath, g_windowManager.GetActiveWindow());
 }
 

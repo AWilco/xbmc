@@ -32,8 +32,8 @@
 #if defined(_LINUX) || defined(_WIN32)
 #include "utils/CPUInfo.h"
 #endif
-#include "AdvancedSettings.h"
-#include "GUISettings.h"
+#include "settings/AdvancedSettings.h"
+#include "settings/GUISettings.h"
 #include "utils/log.h"
 #include "boost/shared_ptr.hpp"
 
@@ -162,12 +162,6 @@ bool CDVDVideoCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &options
   if (!m_dllAvUtil.Load() || !m_dllAvCodec.Load() || !m_dllSwScale.Load()) return false;
 
   m_dllAvCodec.avcodec_register_all();
-
-  #if (! defined USE_EXTERNAL_FFMPEG)
-    m_dllSwScale.sws_rgb2rgb_init(SWS_CPU_CAPS_MMX2);
-  #elif (defined HAVE_LIBSWSCALE_RGB2RGB_H) || (defined HAVE_FFMPEG_RGB2RGB_H)
-    m_dllSwScale.sws_rgb2rgb_init(SWS_CPU_CAPS_MMX2);
-  #endif
 
   m_bSoftware     = hints.software;
   m_pCodecContext = m_dllAvCodec.avcodec_alloc_context();
@@ -393,7 +387,14 @@ int CDVDVideoCodecFFmpeg::Decode(BYTE* pData, int iSize, double dts, double pts)
   m_dts = dts;
   m_pCodecContext->reordered_opaque = pts_dtoi(pts);
 
-  len = m_dllAvCodec.avcodec_decode_video(m_pCodecContext, m_pFrame, &iGotPicture, pData, iSize);
+  AVPacket avpkt;
+  m_dllAvCodec.av_init_packet(&avpkt);
+  avpkt.data = pData;
+  avpkt.size = iSize;
+  /* We lie, but this flag is only used by pngdec.c.
+   * Setting it correctly would allow CorePNG decoding. */
+  avpkt.flags = AV_PKT_FLAG_KEY;
+  len = m_dllAvCodec.avcodec_decode_video2(m_pCodecContext, m_pFrame, &iGotPicture, &avpkt);
 
   if(m_iLastKeyframe < m_pCodecContext->has_b_frames + 1)
     m_iLastKeyframe = m_pCodecContext->has_b_frames + 1;
@@ -420,17 +421,8 @@ int CDVDVideoCodecFFmpeg::Decode(BYTE* pData, int iSize, double dts, double pts)
   && m_pCodecContext->pix_fmt != PIX_FMT_YUVJ420P
   && m_pHardware == NULL)
   {
-    if (!m_dllSwScale.IsLoaded())
-    {
-      if(!m_dllSwScale.Load())
+    if (!m_dllSwScale.IsLoaded() && !m_dllSwScale.Load())
         return VC_ERROR;
-
-        #if (! defined USE_EXTERNAL_FFMPEG)
-          m_dllSwScale.sws_rgb2rgb_init(SWS_CPU_CAPS_MMX2);
-        #elif (defined HAVE_LIBSWSCALE_RGB2RGB_H) || (defined HAVE_FFMPEG_RGB2RGB_H)
-          m_dllSwScale.sws_rgb2rgb_init(SWS_CPU_CAPS_MMX2);
-        #endif
-    }
 
     if (!m_pConvertFrame)
     {

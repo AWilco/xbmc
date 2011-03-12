@@ -19,16 +19,16 @@
  *
  */
 
-#include "File.h"
 #include "Favourites.h"
+#include "filesystem/File.h"
 #include "Util.h"
-#include "Key.h"
-#include "Settings.h"
+#include "guilib/Key.h"
+#include "settings/Settings.h"
 #include "FileItem.h"
-#include "VideoInfoTag.h"
 #include "tinyXML/tinyxml.h"
 #include "utils/log.h"
-#include "AdvancedSettings.h"
+#include "utils/URIUtils.h"
+#include "settings/AdvancedSettings.h"
 
 bool CFavourites::Load(CFileItemList &items)
 {
@@ -40,7 +40,7 @@ bool CFavourites::Load(CFileItemList &items)
     CFavourites::LoadFavourites(favourites, items);
   else
     CLog::Log(LOGDEBUG, "CFavourites::Load - no system favourites found, skipping");
-  CUtil::AddFileToFolder(g_settings.GetProfileUserDataFolder(), "favourites.xml", favourites);
+  URIUtils::AddFileToFolder(g_settings.GetProfileUserDataFolder(), "favourites.xml", favourites);
   if(XFILE::CFile::Exists(favourites))
     CFavourites::LoadFavourites(favourites, items);
   else
@@ -108,7 +108,7 @@ bool CFavourites::Save(const CFileItemList &items)
     rootNode->InsertEndChild(favNode);
   }
 
-  CUtil::AddFileToFolder(g_settings.GetProfileUserDataFolder(), "favourites.xml", favourites);
+  URIUtils::AddFileToFolder(g_settings.GetProfileUserDataFolder(), "favourites.xml", favourites);
   return doc.SaveFile(favourites);
 }
 
@@ -172,8 +172,6 @@ CStdString CFavourites::GetExecutePath(const CFileItem *item, int contextWindow)
   if (item->m_bIsFolder && (g_advancedSettings.m_playlistAsFolders ||
                             !(item->IsSmartPlayList() || item->IsPlayList())))
     execute.Format("ActivateWindow(%i,%s)", contextWindow, Paramify(item->m_strPath));
-  else if (item->m_strPath.Left(9).Equals("plugin://"))
-    execute.Format("RunPlugin(%s)", Paramify(item->m_strPath));
   else if (item->m_strPath.Left(9).Equals("script://"))
     execute.Format("RunScript(%s)", Paramify(item->m_strPath.Mid(9)));
   else if (contextWindow == WINDOW_PROGRAMS)

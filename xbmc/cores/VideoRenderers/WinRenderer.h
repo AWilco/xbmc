@@ -23,10 +23,11 @@
 
 #if !defined(_LINUX) && !defined(HAS_GL)
 
-#include "GraphicContext.h"
+#include "guilib/GraphicContext.h"
 #include "RenderFlags.h"
 #include "BaseRenderer.h"
-#include "D3DResource.h"
+#include "guilib/D3DResource.h"
+#include "RenderCapture.h"
 #include "settings/VideoSettings.h"
 //#define MP_DIRECTRENDERING
 
@@ -115,10 +116,20 @@ enum RenderMethod
 #define PLANE_Y 0
 #define PLANE_U 1
 #define PLANE_V 2
+#define PLANE_UV 1
 
 #define FIELD_FULL 0
 #define FIELD_TOP 1
 #define FIELD_BOT 2
+
+enum BufferFormat
+{
+  Invalid,
+  YV12,
+  NV12,
+  YUY2,
+  UYVY
+};
 
 struct SVideoBuffer
 {
@@ -139,17 +150,20 @@ struct SVideoPlane
 struct YUVBuffer : SVideoBuffer
 {
   ~YUVBuffer();
-  bool Create(unsigned int width, unsigned int height);
+  bool Create(BufferFormat format, unsigned int width, unsigned int height);
   virtual void Release();
   virtual void StartDecode();
   virtual void StartRender();
   virtual void Clear();
+  unsigned int GetActivePlanes() { return m_activeplanes; }
 
   SVideoPlane planes[MAX_PLANES];
 
 private:
   unsigned int     m_width;
   unsigned int     m_height;
+  BufferFormat     m_format;
+  unsigned int     m_activeplanes;
 };
 
 struct DXVABuffer : SVideoBuffer
@@ -175,7 +189,8 @@ public:
 
   virtual void Update(bool bPauseDrawing);
   virtual void SetupScreenshot() {};
-  void CreateThumbnail(CBaseTexture *texture, unsigned int width, unsigned int height);
+
+  bool RenderCapture(CRenderCapture* capture);
 
   // Player functions
   virtual bool         Configure(unsigned int width, unsigned int height, unsigned int d_width, unsigned int d_height, float fps, unsigned flags);
@@ -199,10 +214,10 @@ public:
 
 protected:
   virtual void Render(DWORD flags);
-  void         RenderSW(DWORD flags);
-  void         RenderPS(DWORD flags);
-  void         Stage1(DWORD flags);
-  void         Stage2(DWORD flags);
+  void         RenderSW();
+  void         RenderPS();
+  void         Stage1();
+  void         Stage2();
   void         ScaleFixedPipeline();
   void         CopyAlpha(int w, int h, unsigned char* src, unsigned char *srca, int srcstride, unsigned char* dst, unsigned char* dsta, int dststride);
   virtual void ManageTextures();

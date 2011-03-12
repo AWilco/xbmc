@@ -23,7 +23,7 @@
 
 #include "utils/LabelFormatter.h"
 #include "SortFileItem.h"
-#include "GUIBaseContainer.h"
+#include "guilib/GUIBaseContainer.h"
 #include "MediaSource.h"
 
 class CViewState; // forward
@@ -83,6 +83,7 @@ protected:
   static VECSOURCES m_sources;
 
   int m_currentViewAsControl;
+  int m_playlist;
 
   std::vector<SORT_METHOD_DETAILS> m_sortMethods;
   int m_currentSortMethod;

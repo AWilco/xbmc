@@ -21,10 +21,10 @@
 
 #include "system.h"
 #include "Splash.h"
-#include "GUIImage.h"
-#include "FileSystem/File.h"
-#include "WindowingFactory.h"
-#include "RenderSystem.h"
+#include "guilib/GUIImage.h"
+#include "filesystem/File.h"
+#include "windowing/WindowingFactory.h"
+#include "rendering/RenderSystem.h"
 #include "log.h"
 
 using namespace XFILE;
@@ -52,11 +52,9 @@ void CSplash::Show()
   g_graphicsContext.Lock();
   g_graphicsContext.Clear();
 
-  g_graphicsContext.SetCameraPosition(CPoint(0, 0));
-  float w = g_graphicsContext.GetWidth() * 0.5f;
-  float h = g_graphicsContext.GetHeight() * 0.5f;
-  CGUIImage* image = new CGUIImage(0, 0, w*0.5f, h*0.5f, w, h, m_ImageName);
-  image->SetAspectRatio(CAspectRatio::AR_KEEP);
+  g_graphicsContext.SetRenderingResolution(RES_HDTV_720p, true);  
+  CGUIImage* image = new CGUIImage(0, 0, 0, 0, 1280, 720, m_ImageName);  
+  image->SetAspectRatio(CAspectRatio::AR_CENTER);  
   image->AllocResources();
 
   //render splash image

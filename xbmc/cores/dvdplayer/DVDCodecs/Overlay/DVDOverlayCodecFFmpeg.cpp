@@ -53,7 +53,6 @@ bool CDVDOverlayCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &optio
   m_pCodecContext->debug_mv = 0;
   m_pCodecContext->debug = 0;
   m_pCodecContext->workaround_bugs = FF_BUG_AUTODETECT;
-  m_pCodecContext->dsp_mask = FF_MM_FORCE | FF_MM_MMX | FF_MM_MMXEXT | FF_MM_SSE;
   m_pCodecContext->sub_id = hints.identifier;
   m_pCodecContext->codec_tag = hints.codec_tag;
 
@@ -62,6 +61,43 @@ bool CDVDOverlayCodecFFmpeg::Open(CDVDStreamInfo &hints, CDVDCodecOptions &optio
     m_pCodecContext->extradata_size = hints.extrasize;
     m_pCodecContext->extradata = (uint8_t*)m_dllAvUtil.av_mallocz(hints.extrasize + FF_INPUT_BUFFER_PADDING_SIZE);
     memcpy(m_pCodecContext->extradata, hints.extradata, hints.extrasize);
+
+    // start parsing of extra data - create a copy to be safe and make it zero-terminating to avoid access violations!
+    unsigned int parse_extrasize = hints.extrasize;
+    char* parse_extra = new char[parse_extrasize + 1];
+    memcpy(parse_extra, hints.extradata, parse_extrasize);
+    parse_extra[parse_extrasize] = '\0';
+
+    // assume that the extra data is formatted as a concatenation of lines ('\n' terminated) 
+    char *ptr = parse_extra;
+    do // read line by line
+    {
+      if (!strncmp(ptr, "size:", 5))
+      {
+        int width = 0, height = 0;
+        sscanf(ptr, "size: %dx%d", &width, &height);
+        if (width > 0 && height > 0)
+        {
+          m_pCodecContext->width = width;
+          m_pCodecContext->height = height;
+          CLog::Log(LOGDEBUG,"%s - parsed extradata: size: %d x %d", __FUNCTION__,  width, height);
+        }
+      }
+      /*        
+      // leaving commented code: these items don't work yet... but they may be meaningful
+      if (!strncmp(ptr, "palette:", 8))
+        if (sscanf(ptr, "palette: %x, %x, %x, %x, %x, %x, %x, %x,"
+                                " %x, %x, %x, %x, %x, %x, %x, %x", ...        
+      if (!strncasecmp(ptr, "forced subs: on", 15))
+        forced_subs_only = 1;
+      */
+      // if tried all possibilities, then read newline char and move to next line
+      ptr = strchr(ptr, '\n');
+      if (ptr != NULL) ptr++;
+    } 
+    while (ptr != NULL && ptr <= parse_extra + parse_extrasize);
+
+    delete[] parse_extra;
   }
 
   AVCodec* pCodec = m_dllAvCodec.avcodec_find_decoder(hints.codec);
@@ -126,9 +162,14 @@ int CDVDOverlayCodecFFmpeg::Decode(BYTE* data, int size, double pts, double dura
 
   FreeSubtitle(m_Subtitle);
 
+  AVPacket avpkt;
+  m_dllAvCodec.av_init_packet(&avpkt);
+  avpkt.data = data;
+  avpkt.size = size;
+
   try
   {
-    len = m_dllAvCodec.avcodec_decode_subtitle(m_pCodecContext, &m_Subtitle, &gotsub, data, size);
+    len = m_dllAvCodec.avcodec_decode_subtitle2(m_pCodecContext, &m_Subtitle, &gotsub, &avpkt);
   }
   catch (win32_exception e)
   {

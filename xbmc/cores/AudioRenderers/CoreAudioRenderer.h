@@ -19,12 +19,13 @@
  *
  */
 
+#if !defined(__arm__)
 #ifndef __COREAUDIO_RENDERER_H__
 #define __COREAUDIO_RENDERER_H__
 
 #include <osx/CoreAudio.h>
 #include "IAudioRenderer.h"
-#include <utils/LockFree.h>
+#include <threads/LockFree.h>
 
 struct audio_slice
 {
@@ -167,4 +168,5 @@ class CCoreAudioRenderer : public IAudioRenderer
     long m_DoRunout;
   };
 
+#endif
 #endif

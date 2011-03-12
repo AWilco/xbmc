@@ -23,16 +23,15 @@
 //////////////////////////////////////////////////////////////////////
 
 #include "NfoFile.h"
-#include "utils/IMDB.h"
+#include "video/VideoInfoDownloader.h"
 #include "addons/AddonManager.h"
-#include "FileSystem/File.h"
-#include "FileSystem/Directory.h"
-#include "GUISettings.h"
+#include "filesystem/File.h"
+#include "settings/GUISettings.h"
 #include "Util.h"
 #include "FileItem.h"
-#include "Album.h"
-#include "Artist.h"
-#include "GUISettings.h"
+#include "music/Album.h"
+#include "music/Artist.h"
+#include "settings/GUISettings.h"
 #include "LangInfo.h"
 #include "utils/log.h"
 
@@ -69,9 +68,7 @@ CNfoFile::NFOResult CNfoFile::Create(const CStdString& strPath, const ScraperPtr
 
   AddonPtr addon;
   ScraperPtr defaultScraper;
-  if (!CAddonMgr::Get().GetDefault(m_type, addon))
-    return NO_NFO;
-  else
+  if (CAddonMgr::Get().GetDefault(m_type, addon))
     defaultScraper = boost::dynamic_pointer_cast<CScraper>(addon);
 
   if (m_type == ADDON_SCRAPER_ALBUMS)
@@ -122,7 +119,7 @@ CNfoFile::NFOResult CNfoFile::Create(const CStdString& strPath, const ScraperPtr
     AddScrapers(addons,vecScrapers);
 
   // add default scraper
-  if ((m_info && m_info->ID() != defaultScraper->ID()) || !m_info)
+  if (defaultScraper && m_info && m_info->ID() != defaultScraper->ID())
     vecScrapers.push_back(defaultScraper);
 
   // search ..
@@ -160,7 +157,7 @@ bool CNfoFile::DoScrape(ScraperPtr& scraper)
     {
       if (stricmp(doc.RootElement()->Value(),"error")==0)
       {
-        CIMDB::ShowErrorDialog(doc.RootElement());
+        CVideoInfoDownloader::ShowErrorDialog(doc.RootElement());
         return false;
       }
 

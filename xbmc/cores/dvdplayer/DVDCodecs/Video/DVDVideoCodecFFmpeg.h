@@ -22,9 +22,10 @@
  */
 
 #include "DVDVideoCodec.h"
-#include "Codecs/DllAvCodec.h"
-#include "Codecs/DllAvFormat.h"
-#include "Codecs/DllSwScale.h"
+#include "DllAvCodec.h"
+#include "DllAvFormat.h"
+#include "DllAvUtil.h"
+#include "DllSwScale.h"
 
 class CVDPAU;
 class CCriticalSection;

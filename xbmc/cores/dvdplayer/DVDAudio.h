@@ -26,7 +26,7 @@
 #endif
 #include "cores/AudioRenderers/IAudioRenderer.h"
 #include "cores/IAudioCallback.h"
-#include "utils/CriticalSection.h"
+#include "threads/CriticalSection.h"
 
 #ifndef _LINUX
 enum CodecID;
@@ -83,6 +83,7 @@ protected:
   int m_iChannels;
   int m_iBitrate;
   int m_iBitsPerSample;
+  double m_SecondsPerByte;
   bool m_bPassthrough;
   bool m_bPaused;
 

@@ -19,63 +19,40 @@
  *
  */
 #include "system.h"
-#include "WindowingFactory.h"
 #include "cores/VideoRenderers/RenderManager.h"
-#include "GraphicContext.h"
-#include "MouseStat.h"
+#include "input/MouseStat.h"
 #include "Application.h"
 #include "GUILargeTextureManager.h"
-#include "TextureManager.h"
-#include "AudioContext.h"
-#include "GUISettings.h"
-#include "Settings.h"
-#include "AdvancedSettings.h"
-#include "utils/CharsetConverter.h"
+#include "guilib/TextureManager.h"
+#include "guilib/AudioContext.h"
+#include "settings/GUISettings.h"
+#include "settings/Settings.h"
 #include "utils/AlarmClock.h"
 #include "utils/DownloadQueueManager.h"
-#include "utils/GUIInfoManager.h"
-#include "FileSystem/DllLibCurl.h"
-#include "FileSystem/DirectoryCache.h"
+#include "GUIInfoManager.h"
+#include "filesystem/DllLibCurl.h"
+#include "filesystem/DirectoryCache.h"
 #include "GUIPassword.h"
 #include "LangInfo.h"
-#include "LangCodeExpander.h"
+#include "utils/LangCodeExpander.h"
 #include "PartyModeManager.h"
 #include "PlayListPlayer.h"
 #include "guilib/LocalizeStrings.h"
 #include "guilib/GUIWindowManager.h"
 #ifdef HAS_PYTHON
-#include "lib/libPython/XBPython.h"
+#include "interfaces/python/XBPython.h"
 #endif
 
   CGUISettings       g_guiSettings;
-  CAdvancedSettings  g_advancedSettings;
   CSettings          g_settings;
-
-#if defined(_WIN32) && defined(HAS_GL)
-  CWinSystemWin32GL  g_Windowing;
-#endif
-
-#if defined(_WIN32) && defined(HAS_DX)
-  CWinSystemWin32DX  g_Windowing;
-#endif
-
-#if defined(__APPLE__)
-  CWinSystemOSXGL    g_Windowing;
-#endif
-
-#if defined(HAS_GLX)
-  CWinSystemX11GL    g_Windowing;
-#endif
 
   CXBMCRenderManager g_renderManager;
   CAudioContext      g_audioContext;
-  CCharsetConverter  g_charsetConverter;
   CLangInfo          g_langInfo;
   CLangCodeExpander  g_LangCodeExpander;
   CLocalizeStrings   g_localizeStrings;
   CLocalizeStrings   g_localizeStringsTemp;
 
-  CGraphicContext    g_graphicsContext;
   CGUIWindowManager  g_windowManager;
   XFILE::CDirectoryCache g_directoryCache;
 

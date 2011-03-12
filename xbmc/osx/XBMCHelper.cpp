@@ -19,6 +19,7 @@
  *
  */
 
+#if defined(__APPLE__) && !defined(__arm__)
 #include <fstream>
 #include <sstream>
 #include <Carbon/Carbon.h>
@@ -28,12 +29,12 @@
 #include "PlatformDefs.h"
 #include "Util.h"
 
-#include "log.h"
+#include "utils/log.h"
 #include "system.h"
-#include "GUISettings.h"
-#include "SystemInfo.h"
+#include "settings/GUISettings.h"
+#include "utils/SystemInfo.h"
 
-#include "Atomics.h"
+#include "threads/Atomics.h"
 
 static long sg_singleton_lock_variable = 0;
 XBMCHelper* XBMCHelper::smp_instance = 0;
@@ -480,3 +481,4 @@ static int GetBSDProcessList(kinfo_proc **procList, size_t *procCount)
   assert( (err == 0) == (*procList != NULL) );
   return err;
 }
+#endif

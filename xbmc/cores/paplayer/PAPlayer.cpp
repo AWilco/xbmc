@@ -21,18 +21,18 @@
 
 #include "PAPlayer.h"
 #include "CodecFactory.h"
-#include "../../utils/GUIInfoManager.h"
-#include "AudioContext.h"
-#include "../../FileSystem/FileShoutcast.h"
-#include "../../Application.h"
+#include "GUIInfoManager.h"
+#include "guilib/AudioContext.h"
+#include "Application.h"
 #include "FileItem.h"
-#include "AdvancedSettings.h"
-#include "GUISettings.h"
-#include "Settings.h"
-#include "MusicInfoTag.h"
+#include "settings/AdvancedSettings.h"
+#include "settings/GUISettings.h"
+#include "settings/Settings.h"
+#include "music/tags/MusicInfoTag.h"
 #include "../AudioRenderers/AudioRendererFactory.h"
-#include "../../utils/TimeUtils.h"
+#include "utils/TimeUtils.h"
 #include "utils/log.h"
+#include "utils/MathUtils.h"
 
 #ifdef _LINUX
 #define XBMC_SAMPLE_RATE 44100
@@ -980,10 +980,6 @@ bool PAPlayer::AddPacketsToStream(int stream, CAudioDecoder &dec)
     m_resampler[stream].PutFloatData((float *)dec.GetData(amount), amount);
     ret = true;
   }
-  else if (m_Chunklen[stream] > m_pAudioDecoder[stream]->GetSpace())
-  { // resampler probably have data but wait until we can send atleast a packet
-    ret = false;
-  }
   else if (m_resampler[stream].GetData(m_packet[stream][0].packet))
   {
     // got some data from our resampler - construct audio packet
@@ -1000,8 +996,17 @@ bool PAPlayer::AddPacketsToStream(int stream, CAudioDecoder &dec)
     while (m_bufferPos[stream] >= (int)m_pAudioDecoder[stream]->GetChunkLen())
     {
       int rtn = m_pAudioDecoder[stream]->AddPackets(m_pcmBuffer[stream], m_bufferPos[stream]);
-      m_bufferPos[stream] -= rtn;
-      memcpy(m_pcmBuffer[stream], m_pcmBuffer[stream] + rtn, m_bufferPos[stream]);
+
+      if (rtn > 0)
+      {
+        m_bufferPos[stream] -= rtn;
+        memmove(m_pcmBuffer[stream], m_pcmBuffer[stream] + rtn, m_bufferPos[stream]);
+      }
+      else //no pcm data added
+      {
+        int sleepTime = MathUtils::round_int(m_pAudioDecoder[stream]->GetCacheTime() * 200.0);
+        Sleep(std::max(sleepTime, 1));
+      }
     }
 
     // something done

@@ -20,14 +20,14 @@
  */
 
 #pragma once
-#include "utils/Thread.h"
+#include "threads/Thread.h"
 
 #include "DVDAudio.h"
 #include "DVDClock.h"
 #include "DVDMessageQueue.h"
 #include "DVDDemuxers/DVDDemuxUtils.h"
 #include "DVDStreamInfo.h"
-#include "BitstreamStats.h"
+#include "utils/BitstreamStats.h"
 #include "DVDPlayerAudioResampler.h"
 
 #include <list>
@@ -107,6 +107,10 @@ public:
   void WaitForBuffers();
   bool AcceptsData()                                    { return !m_messageQueue.IsFull(); }
   void SendMessage(CDVDMsg* pMsg, int priority = 0)     { m_messageQueue.Put(pMsg, priority); }
+
+  //! Switch codec if needed. Called when the sample rate gotten from the
+  //! codec changes, in which case we may want to switch passthrough on/off.
+  bool SwitchCodecIfNeeded();
 
   void SetVolume(long nVolume)                          { m_dvdAudio.SetVolume(nVolume); }
   void SetDynamicRangeCompression(long drc)             { m_dvdAudio.SetDynamicRangeCompression(drc); }

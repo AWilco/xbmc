@@ -22,7 +22,7 @@
  */
 
 #include "cores/IPlayer.h"
-#include "utils/Thread.h"
+#include "threads/Thread.h"
 
 #include "IDVDPlayer.h"
 
@@ -184,6 +184,7 @@ public:
   virtual int GetAudioStream();
   virtual void GetAudioStreamName(int iStream, CStdString &strStreamName);
   virtual void SetAudioStream(int iStream);
+  virtual void GetAudioStreamLanguage(int iStream, CStdString &strLanguage);
 
   virtual TextCacheStruct_t* GetTeletextCache();
   virtual void LoadPage(int p, int sp, unsigned char* buffer);
@@ -324,6 +325,8 @@ protected:
   CDVDInputStream* m_pInputStream;  // input stream for current playing file
   CDVDDemux* m_pDemuxer;            // demuxer for current playing file
   CDVDDemux* m_pSubtitleDemuxer;
+
+  CStdString m_lastSub;
   
   struct SDVDInfo
   {

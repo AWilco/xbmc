@@ -525,6 +525,7 @@
   <string id="573">Path</string>
   <string id="574">Country</string>
   <string id="575">In progress</string>
+  <string id="576">Times played</string>
 
   <string id="580">Sort direction</string>
   <string id="581">Sort method</string>
@@ -705,6 +706,8 @@
   <string id="851">Valid port range is 1-65535</string>
   <string id="852">Valid port range is 1024-65535</string>
 
+  <string id="998">Add Music...</string>
+  <string id="999">Add Videos...</string>
   <string id="1000">- Preview</string>
   <string id="1001">Unable to connect</string>
   <string id="1002">XBMC was unable to connect to the network location.</string>
@@ -1198,7 +1201,7 @@
   <string id="13409">Top 250</string>
   <string id="13410">Tune in on Last.fm</string>
   <string id="13411">Minimum fan speed</string>
-
+  <string id="13412">Play from here</string>
   <string id="13413">Downloading</string>
   <string id="13414">Include artists who appear only on compilations</string>
   <string id="13415">Render method</string>

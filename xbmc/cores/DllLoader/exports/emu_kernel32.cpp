@@ -23,7 +23,7 @@
 #include "emu_dummy.h"
 #include "utils/log.h"
 
-#include "utils/IoSupport.h"
+#include "storage/IoSupport.h"
 
 #ifndef _LINUX
 #include <process.h>
@@ -31,7 +31,7 @@
 #endif
 
 #include "../dll_tracker.h"
-#include "FileSystem/SpecialProtocol.h"
+#include "filesystem/SpecialProtocol.h"
 
 #ifdef _LINUX
 #include "../../../linux/PlatformInclude.h"
@@ -929,48 +929,6 @@ extern "C" BOOL WINAPI dllIsProcessorFeaturePresent(DWORD ProcessorFeature)
   CLog::Log(LOGDEBUG, "IsProcessorFeaturePresent(0x%x) => 0x%x\n", ProcessorFeature, result);
 #endif
   return result;
-}
-
-extern "C" DWORD WINAPI dllTlsAlloc()
-{
-  DWORD retval = TlsAlloc();
-#ifdef API_DEBUG
-  CLog::Log(LOGDEBUG, "TlsAlloc() => %d\n", retval);
-#endif
-  return retval;
-}
-
-extern "C" BOOL WINAPI dllTlsFree(DWORD dwTlsIndex)
-{
-  BOOL retval = TlsFree(dwTlsIndex);
-#ifdef API_DEBUG
-  CLog::Log(LOGDEBUG, "KERNEL32!TlsFree(%d) => %d", dwTlsIndex, retval);
-#endif
-  return retval;
-}
-
-extern "C" BOOL WINAPI dllTlsSetValue(int dwTlsIndex, LPVOID lpTlsValue)
-{
-  if (dwTlsIndex == -1)
-    return FALSE;
-  BOOL retval = TlsSetValue(dwTlsIndex, lpTlsValue);
-
-#ifdef API_DEBUG
-  CLog::Log(LOGDEBUG, "KERNEL32!TlsSetValue(%d, 0x%x) => %d", dwTlsIndex, lpTlsValue, retval);
-#endif
-  return retval;
-}
-
-extern "C" LPVOID WINAPI dllTlsGetValue(DWORD dwTlsIndex)
-{
-  if(dwTlsIndex == (DWORD)(-1))
-    return NULL;
-  LPVOID retval = TlsGetValue(dwTlsIndex);
-
-#ifdef API_DEBUG
-  CLog::Log(LOGDEBUG, "KERNEL32!TlsGetValue(%d) => 0x%x", dwTlsIndex, retval);
-#endif
-  return retval;
 }
 
 extern "C" UINT WINAPI dllGetCurrentDirectoryA(UINT c, LPSTR s)

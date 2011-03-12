@@ -19,11 +19,10 @@
  *
  */
 
-#include "AdvancedSettings.h"
 #include "SortFileItem.h"
-#include "StringUtils.h"
-#include "VideoInfoTag.h"
-#include "MusicInfoTag.h"
+#include "settings/AdvancedSettings.h"
+#include "utils/StringUtils.h"
+#include "music/tags/MusicInfoTag.h"
 #include "FileItem.h"
 #include "URL.h"
 #include "utils/log.h"
@@ -146,6 +145,19 @@ void SSortFileItem::ByLastPlayed(CFileItemPtr &item)
     item->SetSortLabel(item->GetMusicInfoTag()->GetTitle());
   else
     item->SetSortLabel(item->GetLabel());
+}
+
+void SSortFileItem::ByPlayCount(CFileItemPtr &item)
+{
+  if (!item) return;
+
+  CStdString label;
+  if (item->HasVideoInfoTag())
+    label.Format("%i %s", item->GetVideoInfoTag()->m_playCount, item->GetLabel().c_str());
+  if (item->HasMusicInfoTag())
+    label.Format("%i %s", item->GetMusicInfoTag()->GetPlayCount(), item->GetLabel().c_str());
+
+  item->SetSortLabel(label);
 }
 
 void SSortFileItem::ByDate(CFileItemPtr &item)

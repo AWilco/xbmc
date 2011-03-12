@@ -1,5 +1,0 @@
-# ignore Windows build files
-
-*.def
-*.dll
-*.lib

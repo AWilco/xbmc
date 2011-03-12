@@ -20,14 +20,15 @@
  */
 
 #include "LabelFormatter.h"
-#include "GUISettings.h"
+#include "settings/GUISettings.h"
 #include "RegExp.h"
 #include "Util.h"
-#include "VideoInfoTag.h"
-#include "MusicInfoTag.h"
+#include "video/VideoInfoTag.h"
+#include "music/tags/MusicInfoTag.h"
 #include "FileItem.h"
 #include "StringUtils.h"
-#include "LocalizeStrings.h"
+#include "URIUtils.h"
+#include "guilib/LocalizeStrings.h"
 
 using namespace MUSIC_INFO;
 
@@ -90,11 +91,12 @@ using namespace MUSIC_INFO;
  *  %O - mpaa rating
  *  %Q - file time
  *  %U - studio
+ *  %V - Playcount
  *  %X - Bitrate
  *  %W - Listeners
  */
 
-#define MASK_CHARS "NSATBGYFLDIJRCKMEPHZOQUXW"
+#define MASK_CHARS "NSATBGYFLDIJRCKMEPHZOQUVXW"
 
 CLabelFormatter::CLabelFormatter(const CStdString &mask, const CStdString &mask2)
 {
@@ -206,7 +208,7 @@ CStdString CLabelFormatter::GetMaskContent(const CMaskString &mask, const CFileI
   case 'L':
     value = item->GetLabel();
     // is the label the actual file or folder name?
-    if (value == CUtil::GetFileName(item->m_strPath))
+    if (value == URIUtils::GetFileName(item->m_strPath))
     { // label is the same as filename, clean it up as appropriate
       value = CUtil::GetTitleFromPath(item->m_strPath, item->m_bIsFolder && !item->IsFileFolder());
     }
@@ -290,6 +292,12 @@ CStdString CLabelFormatter::GetMaskContent(const CMaskString &mask, const CFileI
     {// MPAA Rating
       value = movie ->m_strStudio;
     }
+    break;
+  case 'V': // Playcount
+    if (music)
+      value.Format("%i", music->GetPlayCount());
+    if (movie)
+      value.Format("%i", movie->m_playCount);
     break;
   case 'X': // Bitrate
     if( !item->m_bIsFolder && item->m_dwSize != 0 )

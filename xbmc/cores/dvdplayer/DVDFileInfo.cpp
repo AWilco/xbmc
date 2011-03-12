@@ -19,17 +19,17 @@
  *
  */
 
+#include "DVDFileInfo.h"
 #include "FileItem.h"
-#include "AdvancedSettings.h"
-#include "Picture.h"
-#include "VideoInfoTag.h"
-#include "Util.h"
-#include "FileSystem/StackDirectory.h"
+#include "settings/AdvancedSettings.h"
+#include "pictures/Picture.h"
+#include "video/VideoInfoTag.h"
+#include "filesystem/StackDirectory.h"
 #include "utils/log.h"
 #include "utils/TimeUtils.h"
+#include "utils/URIUtils.h"
 
 #include "DVDClock.h"
-#include "DVDFileInfo.h"
 #include "DVDStreamInfo.h"
 #include "DVDInputStreams/DVDInputStream.h"
 #include "DVDInputStreams/DVDInputStreamBluray.h"
@@ -43,10 +43,9 @@
 #include "DVDCodecs/Video/DVDVideoCodec.h"
 #include "DVDCodecs/Video/DVDVideoCodecFFmpeg.h"
 
-#include "Codecs/DllAvFormat.h"
-#include "Codecs/DllAvCodec.h"
-#include "Codecs/DllSwScale.h"
-#include "FileSystem/File.h"
+#include "DllAvCodec.h"
+#include "DllSwScale.h"
+#include "filesystem/File.h"
 
 
 bool CDVDFileInfo::GetFileDuration(const CStdString &path, int& duration)
@@ -255,77 +254,6 @@ bool CDVDFileInfo::ExtractThumb(const CStdString &strPath, const CStdString &str
   return bOk;
 }
 
-
-void CDVDFileInfo::GetFileMetaData(const CStdString &strPath, CFileItem *pItem)
-{
-  if (!pItem)
-    return;
-
-  CDVDInputStream *pInputStream = CDVDFactoryInputStream::CreateInputStream(NULL, strPath, "");
-  if (!pInputStream)
-  {
-    CLog::Log(LOGERROR, "%s - Error creating stream for %s", __FUNCTION__, strPath.c_str());
-    return ;
-  }
-
-  if (pInputStream->IsStreamType(DVDSTREAM_TYPE_DVD) || !pInputStream->Open(strPath.c_str(), ""))
-  {
-    CLog::Log(LOGERROR, "%s - invalid stream in %s", __FUNCTION__, strPath.c_str());
-    delete pInputStream;
-    return ;
-  }
-
-  CDVDDemuxFFmpeg *pDemuxer = new CDVDDemuxFFmpeg;
-
-  try
-  {
-    if (!pDemuxer->Open(pInputStream))
-    {
-      CLog::Log(LOGERROR, "%s - Error opening demuxer", __FUNCTION__);
-      delete pDemuxer;
-      delete pInputStream;
-      return ;
-    }
-  }
-  catch(...)
-  {
-    CLog::Log(LOGERROR, "%s - Exception thrown when opening demuxer", __FUNCTION__);
-    if (pDemuxer)
-      delete pDemuxer;
-    delete pInputStream;
-    return ;
-  }
-
-  AVFormatContext *pContext = pDemuxer->m_pFormatContext;
-  if (pContext)
-  {
-    int nLenMsec = pDemuxer->GetStreamLength();
-    CStdString strDuration;
-    int nHours = nLenMsec / 1000 / 60 / 60;
-    int nMinutes = ((nLenMsec / 1000) - nHours * 3600) / 60;
-    int nSec = (nLenMsec / 1000)  - nHours * 3600 - nMinutes * 60;
-    strDuration.Format("%d", nLenMsec);
-    pItem->SetProperty("duration-msec", strDuration);
-    strDuration.Format("%02d:%02d:%02d", nHours, nMinutes, nSec);
-    pItem->SetProperty("duration-str", strDuration);
-    pItem->SetProperty("title", pContext->title);
-    pItem->SetProperty("author", pContext->author);
-    pItem->SetProperty("copyright", pContext->copyright);
-    pItem->SetProperty("comment", pContext->comment);
-    pItem->SetProperty("album", pContext->album);
-    strDuration.Format("%d", pContext->year);
-    pItem->SetProperty("year", strDuration);
-    strDuration.Format("%d", pContext->track);
-    pItem->SetProperty("track", strDuration);
-    pItem->SetProperty("genre", pContext->genre);
-  }
-
-  delete pDemuxer;
-  pInputStream->Close();
-  delete pInputStream;
-
-}
-
 /**
  * \brief Open the item pointed to by pItem and extact streamdetails
  * \return true if the stream details have changed
@@ -342,7 +270,7 @@ bool CDVDFileInfo::GetFileStreamDetails(CFileItem *pItem)
     return false;
 
   CStdString playablePath = strFileNameAndPath;
-  if (CUtil::IsStack(playablePath))
+  if (URIUtils::IsStack(playablePath))
     playablePath = XFILE::CStackDirectory::GetFirstStackedFile(playablePath);
 
   CDVDInputStream *pInputStream = CDVDFactoryInputStream::CreateInputStream(NULL, playablePath, "");
@@ -391,7 +319,7 @@ bool CDVDFileInfo::DemuxerToStreamDetails(CDVDInputStream *pInputStream, CDVDDem
       p->m_iDuration = pDemux->GetStreamLength();
 
       // stack handling
-      if (CUtil::IsStack(path))
+      if (URIUtils::IsStack(path))
       {
         CFileItemList files;
         XFILE::CStackDirectory stack;
