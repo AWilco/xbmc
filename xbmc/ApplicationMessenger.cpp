@@ -322,7 +322,7 @@ case TMSG_POWERDOWN:
             //It will fall through to PlayFile
             if (list->Size() == 1 && !(*list)[0]->IsPlayList())
             {
-              g_application.PlayMedia((*list)[0], playlist);
+              g_application.PlayMedia(*((*list)[0]), playlist);
             }
             else
             {
