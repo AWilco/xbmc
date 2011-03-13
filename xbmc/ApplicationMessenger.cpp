@@ -307,6 +307,7 @@ case TMSG_POWERDOWN:
 
           if (list->Size() > 0)
           {
+
             int playlist = PLAYLIST_MUSIC;
             for (int i = 0; i < list->Size(); i++)
             {
@@ -317,10 +318,19 @@ case TMSG_POWERDOWN:
               }
             }
 
-            g_playlistPlayer.ClearPlaylist(playlist);
-            g_playlistPlayer.Add(playlist, (*list));
-            g_playlistPlayer.SetCurrentPlaylist(playlist);
-            g_playlistPlayer.Play(pMsg->dwParam1);
+            //AW: for single item lists try PlayMedia. This covers some more cases where a playlist is not appropriate
+            //It will fall through to PlayFile
+            if (list->Size() == 1 && !(*list)[0]->IsPlayList())
+            {
+              g_application.PlayMedia((*list)[0], playlist);
+            }
+            else
+            {
+                g_playlistPlayer.ClearPlaylist(playlist);
+              g_playlistPlayer.Add(playlist, (*list));
+              g_playlistPlayer.SetCurrentPlaylist(playlist);
+              g_playlistPlayer.Play(pMsg->dwParam1);
+            }
           }
 
           delete list;
